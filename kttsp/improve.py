@@ -405,7 +405,8 @@ def improve(instance, solution: Solution, eph, searcher: LegSearcher, time_budge
 
     checkpoint(tour)
     remaining = time_budget - (time.time() - t0)
-    if remaining > 10.0:
+    annealed = remaining > 10.0
+    if annealed:
         if chains > 1:
             tour = parallel_local_search(tour, instance, remaining, chains, seed, window, log=log,
                                          settings=searcher.s)
@@ -417,9 +418,14 @@ def improve(instance, solution: Solution, eph, searcher: LegSearcher, time_budge
     tour = retime_polish(tour, instance, eph, base_settings=searcher.s, log=log)
     meta = dict(solution.meta)
     meta.pop("checkpoint", None)
+    # minimum time of flight used by this run (a run without one drops the earlier value)
     if searcher.s.min_tof_floor > 0.0:
         meta["min_tof_floor"] = searcher.s.min_tof_floor
+    else:
+        meta.pop("min_tof_floor", None)
     meta.update({"improve_seconds": round(meta.get("improve_seconds", 0) + time.time() - t0, 1),
-                 "objective_before_improve": meta.get("objective_before_improve", start_obj),
-                 "sa_seed": seed, "sa_window": window, "sa_chains": chains})
+                 "objective_before_improve": meta.get("objective_before_improve", start_obj)})
+    # annealing settings, only when the annealing ran (a run that only re-times the tour keeps the earlier ones)
+    if annealed:
+        meta.update({"sa_seed": seed, "sa_window": window, "sa_chains": chains})
     return tour.to_solution(instance, meta)

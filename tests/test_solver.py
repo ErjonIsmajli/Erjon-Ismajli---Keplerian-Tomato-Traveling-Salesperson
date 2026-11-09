@@ -65,6 +65,17 @@ def test_construct_and_improve_small_instance(small_solution):
     assert report2.feasible, report2.violations
     assert report2.objective <= report.objective + 1e-9
     assert "checkpoint" not in better.meta
+    assert better.meta["sa_chains"] == 1 and better.meta["sa_seed"] == 0
+
+
+def test_retiming_only_run_keeps_the_annealing_settings(small_solution):
+    inst, eph, searcher, sol = small_solution
+    sol = copy.deepcopy(sol)
+    sol.meta.update({"sa_seed": 3, "sa_window": 7, "sa_chains": 8, "min_tof_floor": 0.01})
+    # budget 0: no annealing, only the re-timing, with the minimum time of flight of the instance
+    polished = improve(inst, sol, eph, searcher, time_budget=0.0, log=lambda *a: None)
+    assert [polished.meta[k] for k in ("sa_seed", "sa_window", "sa_chains")] == [3, 7, 8]
+    assert "min_tof_floor" not in polished.meta
 
 
 def test_figures_are_written(small_solution, tmp_path):
