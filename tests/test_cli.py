@@ -47,9 +47,10 @@ def test_info_improve_and_plot(solved, capsys):
     folder, inst = solved
     main(["info", str(inst)])
     assert "low cluster 0: 2 tomatoes" in capsys.readouterr().out
-    main(["improve", str(inst), str(folder / "tiny.json"), "--budget", "0", "--out", str(folder / "better.json")])
-    assert (folder / "better.json").exists() and (folder / "submission_better.json").exists()
-    main(["plot", str(inst), str(folder / "better.json"), "--out", str(folder / "figs")])
+    better = folder / "improved" / "better.json"          # written into a folder that does not exist yet
+    main(["improve", str(inst), str(folder / "tiny.json"), "--budget", "0", "--out", str(better)])
+    assert better.exists() and (better.parent / "submission_better.json").exists()
+    main(["plot", str(inst), str(better), "--out", str(folder / "figs")])
     assert len(list((folder / "figs").glob("tiny_*.png"))) == 5
 
 

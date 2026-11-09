@@ -97,6 +97,7 @@ def cmd_improve(args):
     eph = Ephemeris(inst)
     searcher = LegSearcher(eph, inst, SearchSettings(min_tof_floor=args.min_tof or 0.0))
     out = Path(args.out or args.solution)
+    out.parent.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     sol = improve(inst, sol, eph, searcher, time_budget=args.budget, seed=args.seed, checkpoint_path=out, log=print,
                   chains=args.chains)
