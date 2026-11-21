@@ -1289,7 +1289,7 @@
     "feasible": true,
     "construct_seconds": 450.4,
     "improve_seconds": 2551.6,
-    "objective_before_improve": 198.5824436277892,
+    "objective_before_improve": 202.02090578291907,
     "sa_seed": 0,
     "sa_window": 5,
     "sa_chains": 6,
