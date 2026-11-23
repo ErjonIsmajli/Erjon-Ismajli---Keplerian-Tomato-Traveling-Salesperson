@@ -2,7 +2,7 @@
 an output folder (runs/ by default, so the final results in solutions/ are never overwritten),
 and print a Markdown table with the results.
 
-    .venv/bin/python scripts/run_all.py --budget-easy 900 --budget-medium 2400 --budget-hard 4200
+    .venv/bin/python scripts/run_all.py --budget-easy 900 --budget-medium 4200 --budget-hard 4200
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--instances", nargs="+", default=["easy", "medium", "hard"])
     ap.add_argument("--budget-easy", type=float, default=900.0)
-    ap.add_argument("--budget-medium", type=float, default=2400.0)
+    ap.add_argument("--budget-medium", type=float, default=4200.0)
     ap.add_argument("--budget-hard", type=float, default=4200.0)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--no-figures", action="store_true")

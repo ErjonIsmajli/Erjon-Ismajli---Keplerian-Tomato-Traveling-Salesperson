@@ -145,11 +145,14 @@ later start can never arrive earlier), which makes re-timing a tour after a loca
 * **Simulated annealing on the visiting order**: swaps, or-opt moves, segment reversals (all inside one altitude
   group) and moves that shift the point where the sweep dips into a cluster, half of them aimed at the longest
   legs of the tour. Times are never part of the search state: after a move the affected part of the tour is
-  re-timed with the earliest-arrival rule (first with a coarse grid to screen the move, then exactly), the arrival
-  time at the first unchanged tomato decides acceptance, and only accepted moves re-time the rest of the tour. A
-  leg of the old tour is kept whenever it is still flyable and earlier than what the search finds, so re-timing
-  never makes a tour worse, and it never spends an exception that a later change of altitude needs. Several
-  chains with different seeds run in parallel processes (`--chains`).
+  re-timed with the earliest-arrival rule (first with a coarse grid, then exactly) and the arrival time at the
+  first unchanged tomato screens the move with the Metropolis rule; a move that passes is re-timed to the end of
+  the tour, and the part of the mission-time change that the screen did not see is tested in the same way. The
+  second test matters because a small delay can make the rest of the tour miss its transfer windows: on the hard
+  tour, a move that reached the first unchanged tomato 1.2 days later ended the mission 93 days later. A leg of
+  the old tour is kept whenever it is still flyable and earlier than what the search finds, so re-timing never
+  makes a tour worse, and it never spends an exception that a later change of altitude needs. Several chains
+  with different seeds run in parallel processes (`--chains`).
 * **Polish**: a final re-timing pass with a 2x finer search grid: every transfer is searched again, and the
   previous one is kept only where it is still better.
 
@@ -166,30 +169,31 @@ section 5). The last column gives the mission time reached by a published compet
 | instance | tomatoes | mission time [days] | exceptions used | max delta-v [m/s] | solver time | reference entry [days] |
 |---|---|---|---|---|---|---|
 | easy | 49 | **118.929** | 5 / 5 | 599.50 | 16 min | 116.9 |
-| medium | 181 | **197.554** | 5 / 5 | 599.50 | 50 min | 234.9 |
+| medium | 181 | **194.585** | 5 / 5 | 599.50 | 82 min | 234.9 |
 | hard | 1051 | **451.054** | 5 / 5 | 599.50 | 112 min | 393.2 |
 
-Solver time is wall-clock time on a 15-core laptop (parallel construction and annealing chains), including the
-final re-timing. Among the entries submitted by 1 July 2026, the hard leaderboard ranged from 337.6 days (winner)
-to 1965 days, and the hard tour here would have ranked fifth of nine. Later entries have improved the best scores:
-on 9 November 2026 the leaderboards start at 101.2, 146.4 and 272.7 days, and the three tours here would rank
-12th of 16, 12th of 16 and 8th of 12.
+Solver time is the wall-clock time of all the commands that produced the tour (below) on a 15-core laptop
+(parallel construction and annealing chains), including the final re-timing. Among the entries submitted by
+1 July 2026, the hard leaderboard ranged from 337.6 days (winner) to 1965 days, and the hard tour here would have
+ranked fifth of nine. Later entries have improved the best scores: on 23 November 2026 the leaderboards start at
+101.2, 146.4 and 272.7 days, and the three tours here would rank 13th of 17, 12th of 16 and 8th of 12.
 
 What the tours look like:
 
 * easy: 48 legs, 2.48 days per leg on average. With only one or two neighbours within reach of a 100 m/s
   transfer, the visiting order is essentially the inclination sweep; about 60% of the transfers between high
-  orbits need one to three revolutions of the transfer orbit to fix the phase, a third need less than one.
-* medium: 180 legs, 1.10 days per leg. Closer inclination neighbours give the greedy a choice of targets that
+  orbits need one to three revolutions of the transfer orbit to fix the phase, the other 40% less than one.
+* medium: 180 legs, 1.08 days per leg. Closer inclination neighbours give the greedy a choice of targets that
   are already well phased.
 * hard: 1050 legs, 0.43 days per leg: with dozens of neighbours in reach, most hops are short, almost direct
   transfers.
 
-In every tour 98 to 100% of the normal transfers use the full budget (99.5 m/s, the limit minus the safety margin)
-and the five exception transfers sit just under 600 m/s: the earliest arrival is almost always found at the edge
-of what is allowed. Spending the spare fifth exception is worth 0.6 to 4 days, the
-annealing adds 3.5 days on easy and about one day on medium, and the final re-timing with the finer grid gains
-0.23 days on hard and almost nothing on the other two.
+In every tour 99 to 100% of the normal transfers come within 0.5 m/s of the full budget (99.5 m/s, the limit minus
+the safety margin) and the five exception transfers sit just under 600 m/s: the earliest arrival is almost always
+found at the edge of what is allowed. Spending the spare fifth exception is worth 0.6 to 4 days. The annealing adds
+3.5 days on easy and 4.0 days on medium (1.0 with the first version, 3.0 more with the mission-time test of
+section 3.5); on hard, where judging one move takes several seconds, an hour of annealing with six chains finds no
+shorter order. The final re-timing with the finer grid gains 0.23 days on hard and almost nothing on the other two.
 
 | easy | medium | hard |
 |---|---|---|
@@ -214,6 +218,7 @@ How the tours were computed (these commands overwrite the files in `solutions/`)
 .venv/bin/python -m kttsp solve data/medium.kttsp --workers 6 --budget 1800 --lookahead 0 --out solutions/medium.json
 .venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 600 --chains 6
 .venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 0 --min-tof 0.01
+.venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 1800 --chains 6 --min-tof 0.01
 .venv/bin/python -m kttsp solve data/hard.kttsp   --workers 6 --window 30 --candidates 8 --starts 2 --budget 3600 --lookahead 0 --out solutions/hard.json
 .venv/bin/python -m kttsp improve data/hard.kttsp solutions/hard.json --budget 600 --chains 6
 .venv/bin/python -m kttsp improve data/hard.kttsp solutions/hard.json --budget 0
@@ -222,19 +227,21 @@ How the tours were computed (these commands overwrite the files in `solutions/`)
 
 The tours were computed while the solver was still being developed: the medium and hard tours were built before
 the lookahead existed (hence `--lookahead 0`), all three were annealed with an earlier version of the improvement
-code, and all three were finally re-timed with the final code (the `--budget 0` lines). The construction is
+code and re-timed with the final code (the `--budget 0` lines), and after the mission-time test of section 3.5 was
+added, the medium tour was annealed once more (the last medium line). The same second annealing found no shorter
+tour on easy (`--budget 900 --chains 8`) or on hard (`--budget 3600 --chains 6`). The construction is
 deterministic, and the commands above rebuild exactly the same starting tours. The annealing uses fixed seeds, but
 its outcome depends on how many moves fit into the time budget, so re-running the commands does not give exactly
 the same final mission times.
 
 ## 5. Verification
 
-* `pytest` (83 tests, about two minutes): file parsing and validation, propagation (energy, period,
+* `pytest` (84 tests, about two minutes): file parsing and validation, propagation (energy, period,
   element round trips, negative inclinations), Lambert (every returned arc really lands on the target when
   propagated; scalar and vectorised versions agree; the circular-orbit and pure-plane-change cases have the known
   costs), the evaluator rules and malformed inputs, an end-to-end construction + improvement on a synthetic
-  instance, the search details (cache, minimum time of flight, reserved exceptions, polish), the run settings
-  stored in the solution files and every command of the command line.
+  instance, the search details (cache, minimum time of flight, reserved exceptions, polish, the mission-time test
+  of the annealing), the run settings stored in the solution files and every command of the command line.
 * `tests/fixtures/pykep_reference.json` holds 300 random legs per instance with the delta-v computed by pykep;
   `tests/test_pykep_reference.py` checks that `leg_dv` reproduces them to 1e-6 m/s without pykep installed.
 * `scripts/crosscheck_pykep.py`, run inside the Docker image, compares 2 000 random legs per instance with the
@@ -332,5 +339,5 @@ tests/                pytest suite and the pykep reference fixture
 * M. Bannach, G. Acciarini, D. Izzo, "The Keplerian Traveling Salesperson Problem", arXiv:2605.00010 (2026)
 * "ScienceFlow: A long-horizon agent for ML research, scientific discovery and beyond", arXiv:2608.14354 (2026):
   source of the reference entry in the results table
-* Leaderboards of the three problems on the competition platform (read on 9 November 2026):
+* Leaderboards of the three problems on the competition platform (read on 23 November 2026):
   https://optimise.esa.int/challenge/spoc-4-keplerian-tomato-traveling-salesperson/Problems

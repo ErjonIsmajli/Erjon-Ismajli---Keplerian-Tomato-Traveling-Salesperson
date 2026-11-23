@@ -91,6 +91,7 @@ def test_documented_command_lines_parse():
         "solve data/medium.kttsp --workers 6 --budget 1800 --lookahead 0 --out solutions/medium.json",
         "improve data/medium.kttsp solutions/medium.json --budget 600 --chains 6",
         "improve data/medium.kttsp solutions/medium.json --budget 0 --min-tof 0.01",
+        "improve data/medium.kttsp solutions/medium.json --budget 1800 --chains 6 --min-tof 0.01",
         "solve data/hard.kttsp --workers 6 --window 30 --candidates 8 --starts 2 --budget 3600 --lookahead 0 "
         "--out solutions/hard.json",
         "evaluate data/medium.kttsp solutions/medium.json --min-tof 0.01",
