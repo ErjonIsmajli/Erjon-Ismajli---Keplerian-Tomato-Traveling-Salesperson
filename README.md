@@ -192,8 +192,9 @@ In every tour 99 to 100% of the normal transfers come within 0.5 m/s of the full
 the safety margin) and the five exception transfers sit just under 600 m/s: the earliest arrival is almost always
 found at the edge of what is allowed. Spending the spare fifth exception is worth 0.6 to 4 days. The annealing adds
 3.5 days on easy and 4.0 days on medium (1.0 with the first version, 3.0 more with the mission-time test of
-section 3.5); on hard, where judging one move takes several seconds, an hour of annealing with six chains finds no
-shorter order. The final re-timing with the finer grid gains 0.23 days on hard and almost nothing on the other two.
+section 3.5); on hard, where judging one move takes several seconds, about three hours of annealing with ten
+chains finds no shorter order. The final re-timing with the finer grid gains 0.23 days on hard and almost nothing
+on the other two.
 
 | easy | medium | hard |
 |---|---|---|
@@ -229,10 +230,10 @@ The tours were computed while the solver was still being developed: the medium a
 the lookahead existed (hence `--lookahead 0`), all three were annealed with an earlier version of the improvement
 code and re-timed with the final code (the `--budget 0` lines), and after the mission-time test of section 3.5 was
 added, the medium tour was annealed once more (the last medium line). The same second annealing found no shorter
-tour on easy (`--budget 900 --chains 8`) or on hard (`--budget 3600 --chains 6`). The construction is
-deterministic, and the commands above rebuild exactly the same starting tours. The annealing uses fixed seeds, but
-its outcome depends on how many moves fit into the time budget, so re-running the commands does not give exactly
-the same final mission times.
+tour on easy (`--budget 900 --chains 8`) or on hard (`--budget 3600 --chains 6`), and neither did a run of
+about three hours with ten chains on hard. The construction is deterministic, and the commands above rebuild
+exactly the same starting tours. The annealing uses fixed seeds, but its outcome depends on how many moves fit
+into the time budget, so re-running the commands does not give exactly the same final mission times.
 
 ## 5. Verification
 
