@@ -8,7 +8,7 @@ from kttsp.evaluator import evaluate
 from kttsp.improve import Annealer, Decoder, Tour, improve, retime_polish
 from kttsp.solution import Solution
 from kttsp.kepler import Ephemeris
-from kttsp.leg_search import LegSearcher, SearchSettings
+from kttsp.leg_search import Leg, LegSearcher, SearchSettings
 from tests.conftest import make_instance
 
 A_HIGH, A_LOW = 1.5e7, 3.75e6
@@ -182,6 +182,39 @@ def test_moves_keep_a_permutation_on_tiny_tours(small_solution):
             if res is not None:
                 new, lo, hi = res
                 assert sorted(new.tolist()) == list(range(n)) and 0 <= lo <= hi < n
+
+
+class _ScriptedDecoder:
+    """Stand-in for the Decoder: returns prepared legs for the changed window and for the rest of the tour."""
+
+    def __init__(self, changed, rest):
+        self.changed, self.rest = changed, rest
+
+    def decode(self, order, old_legs=None, start=0, stop=None, prefix=None):
+        return self.changed if start == 0 else self.rest
+
+
+class _FixedDraw:
+    """Random source whose every draw is 0.5: a Metropolis test passes exactly when exp(-delta / T) > 0.5."""
+
+    def random(self):
+        return 0.5
+
+
+def test_annealing_judges_a_move_by_the_change_of_the_mission_time():
+    inst = small_instance()
+    tour = Tour(np.arange(6), [Leg(k, k + 1, float(k), 1.0, 50.0) for k in range(5)])   # one day per leg, ends at 5
+    changed = [Leg(0, 2, 0.0, 1.0, 50.0), Leg(2, 1, 1.0, 1.0, 50.0), Leg(1, 3, 2.0, 1.5, 50.0)]  # tomato 3 at 3.5
+    carried = [Leg(3, 4, 3.5, 1.0, 50.0), Leg(4, 5, 4.5, 1.0, 50.0)]   # the half-day delay reaches the end
+    missed = [Leg(3, 4, 3.5, 1.0, 50.0), Leg(4, 5, 40.0, 1.0, 50.0)]   # the delay misses the window of the last leg
+    for rest, end in ((carried, 5.5), (missed, None)):
+        ann = Annealer(inst, _ScriptedDecoder(changed, rest), _FixedDraw(), window=5)
+        ann.propose = lambda order, legs=None: (np.array([0, 2, 1, 3, 4, 5]), 1, 2)
+        new = ann.try_move(tour, temperature=2.0)    # the half-day delay alone passes: exp(-0.25) > 0.5
+        if end is None:
+            assert new is None
+        else:
+            assert new is not None and new.objective == pytest.approx(end)
 
 
 def test_improve_accepts_a_file_without_transfer_costs(small_solution):

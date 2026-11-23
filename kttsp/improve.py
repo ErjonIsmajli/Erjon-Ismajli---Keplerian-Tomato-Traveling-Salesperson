@@ -260,6 +260,10 @@ class Annealer:
 
     # ---- evaluation ---------------------------------------------------------------------------
 
+    def _rejected(self, delta: float, temperature: float) -> bool:
+        """Metropolis test: a later time (delta > 0 days) passes with probability exp(-delta / T)."""
+        return delta > 0.0 and (temperature <= 0.0 or self.rng.random() >= math.exp(-delta / temperature))
+
     def try_move(self, tour: Tour, temperature: float):
         """Apply one random move; returns the new Tour when accepted, else None."""
         res = self.propose(tour.order, tour.legs)
@@ -272,22 +276,23 @@ class Annealer:
         old_arrival = tour.legs[k1].t_arr
         if self.coarse is not None:       # cheap screening of the changed window
             screen = self.coarse.decode(new_order, tour.legs, start=k0, stop=k1 + 1, prefix=tour.legs[:k0])
-            if screen is None:
-                return None
-            delta = screen[-1].t_arr - old_arrival
-            if delta > 0.0 and (temperature <= 0.0 or self.rng.random() >= math.exp(-delta / temperature)):
+            if screen is None or self._rejected(screen[-1].t_arr - old_arrival, temperature):
                 return None
         window = self.dec.decode(new_order, tour.legs, start=k0, stop=k1 + 1, prefix=tour.legs[:k0])
         if window is None:
             return None
         delta = window[-1].t_arr - old_arrival
-        if delta > 0.0 and (temperature <= 0.0 or self.rng.random() >= math.exp(-delta / temperature)):
+        if self._rejected(delta, temperature):
             return None
         suffix = self.dec.decode(new_order, tour.legs, start=k1 + 1, prefix=tour.legs[:k0] + window)
         if suffix is None:
             return None
         new = Tour(new_order, tour.legs[:k0] + window + suffix)
         if new.n_exceptions(self.inst.dv_max) > self.inst.n_exceptions or new.objective > self.inst.t_max:
+            return None
+        # a small delay at the first unchanged tomato can make the rest of the tour miss its transfer
+        # windows, so the part of the mission-time change that the window test did not see is tested too
+        if self._rejected(new.objective - tour.objective - max(delta, 0.0), temperature):
             return None
         return new
 
