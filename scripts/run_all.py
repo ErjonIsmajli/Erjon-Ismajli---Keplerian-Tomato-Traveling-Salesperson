@@ -2,7 +2,7 @@
 an output folder (runs/ by default, so the final results in solutions/ are never overwritten),
 and print a Markdown table with the results.
 
-    .venv/bin/python scripts/run_all.py --budget-easy 900 --budget-medium 4200 --budget-hard 4200
+    .venv/bin/python scripts/run_all.py --budget-easy 900 --budget-medium 1800 --budget-hard 0
 """
 from __future__ import annotations
 
@@ -22,12 +22,13 @@ from kttsp.kepler import Ephemeris  # noqa: E402
 from kttsp.leg_search import LegSearcher, SearchSettings  # noqa: E402
 from kttsp.plotting import save_all_figures  # noqa: E402
 
-# construction settings of the published runs (the commands in section 4 of the README); the medium and
-# hard tours were built before the lookahead existed, hence lookahead=0
+# construction settings of the published runs (the commands in section 4 of the README); the windows of
+# medium and hard cover a whole low cluster or dense group of the high chain, and the lookahead is off for
+# them because it made the hard tour longer
 CONSTRUCT = {
     "easy": dict(window=6, n_candidates=4, max_starts=3, start_in_high=False),
-    "medium": dict(window=6, n_candidates=4, max_starts=3, lookahead=0),
-    "hard": dict(window=30, n_candidates=8, max_starts=2, lookahead=0),
+    "medium": dict(window=60, n_candidates=8, max_starts=3, lookahead=0),
+    "hard": dict(window=200, n_candidates=8, max_starts=3, lookahead=0),
 }
 # medium is solved with the 0.01-day minimum time of flight of the GitHub copy of the file, so the
 # tour is valid with both published versions of medium.kttsp
@@ -38,8 +39,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--instances", nargs="+", default=["easy", "medium", "hard"])
     ap.add_argument("--budget-easy", type=float, default=900.0)
-    ap.add_argument("--budget-medium", type=float, default=4200.0)
-    ap.add_argument("--budget-hard", type=float, default=4200.0)
+    ap.add_argument("--budget-medium", type=float, default=1800.0)
+    ap.add_argument("--budget-hard", type=float, default=0.0)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--no-figures", action="store_true")
     ap.add_argument("--workers", type=int, default=4)

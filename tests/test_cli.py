@@ -88,12 +88,11 @@ def test_documented_command_lines_parse():
     lines = [
         "solve data/easy.kttsp --workers 8 --budget 900 --chains 8 --no-start-high --out solutions/easy.json",
         "improve data/easy.kttsp solutions/easy.json --budget 0",
-        "solve data/medium.kttsp --workers 6 --budget 1800 --lookahead 0 --out solutions/medium.json",
-        "improve data/medium.kttsp solutions/medium.json --budget 600 --chains 6",
-        "improve data/medium.kttsp solutions/medium.json --budget 0 --min-tof 0.01",
-        "improve data/medium.kttsp solutions/medium.json --budget 1800 --chains 6 --min-tof 0.01",
-        "solve data/hard.kttsp --workers 6 --window 30 --candidates 8 --starts 2 --budget 3600 --lookahead 0 "
+        "solve data/medium.kttsp --workers 6 --window 60 --candidates 8 --lookahead 0 --budget 1800 --chains 6 "
+        "--min-tof 0.01 --out solutions/medium.json",
+        "solve data/hard.kttsp --workers 9 --window 200 --candidates 8 --starts 3 --lookahead 0 --budget 0 "
         "--out solutions/hard.json",
+        "improve data/hard.kttsp solutions/hard.json --budget 0",
         "evaluate data/medium.kttsp solutions/medium.json --min-tof 0.01",
         "plot data/easy.kttsp runs/easy.json --out runs/figures",
     ]
