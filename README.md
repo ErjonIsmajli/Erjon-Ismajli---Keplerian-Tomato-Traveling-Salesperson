@@ -64,9 +64,12 @@ Looking at the orbital elements explains almost everything about how a good tour
 * **One common line of nodes.** All `Omega` are between 0 and 0.01 rad, so every orbital plane contains the same
   line. Changing from one plane to another costs a plane change `2 v sin(di / 2)`: with 100 m/s a high tomato can
   reach planes up to 0.175 rad (10 deg) away, a low tomato only 0.087 rad (5 deg).
-* **The high orbits form one chain.** Their inclinations are spread evenly between 0 and pi, and the largest gap
-  between neighbours (0.104 / 0.052 / 0.021 rad in easy / medium / hard) is below the 0.175 rad limit: the whole
-  high group can be swept in inclination order with normal transfers.
+* **The high orbits form one chain with three dense groups.** Single high tomatoes are spread evenly in
+  inclination between 0 and pi, 0.104 / 0.052 / 0.021 rad apart in easy / medium / hard, below the 0.175 rad
+  limit: the whole high group can be swept in inclination order with normal transfers. In medium and hard, three
+  dense groups sit on this chain at the inclinations of the low clusters: 17 to 19 tomatoes each in medium, 152
+  to 154 in hard (three quarters of its high tomatoes), each within 4 deg of inclination. Inside a dense group
+  the inclination says almost nothing about which tomato to visit next; only the phase does.
 * **The low orbits form three clusters** near `i = 0`, `i = pi/2` and `i = pi`. Inside a cluster the gaps are
   small; between clusters they are ~1.5 rad, far more than even an exception transfer can buy at low altitude.
   A cluster can only be entered from, or left for, the high chain with a Hohmann-like transfer (~515 m/s plus a
@@ -130,13 +133,15 @@ later start can never arrive earlier), which makes re-timing a tour after a loca
 2. `make_plans` builds the macro plans: the clusters in sweep order, separated by the pieces of the high chain
    that lie between their inclinations, for both sweep directions and for starting either inside the first
    cluster or on the chain. Plans needing more than `E` exceptions are dropped.
-3. `GreedyBuilder` fills a plan with the earliest-arrival rule: from the current tomato it looks at the next few
-   tomatoes of the sweep (a window of 6 for easy/medium, 30 for hard), keeps those within plane-change reach,
-   ranks them with a quick phase-difference estimate, runs the full leg search for the best candidates and moves
-   to the one it can reach first; a one-step lookahead prefers the candidate whose own best successor arrives
-   first. The sweep never moves far from the tomato left furthest behind, so no straggler is lost. Block
-   transitions (cluster entries and exits) use the exception limit; the exceptions that later cluster entries need
-   are kept back, and only spare ones may be spent inside a block.
+3. `GreedyBuilder` fills a plan with the earliest-arrival rule: from the current tomato it looks at the next
+   tomatoes of the sweep (a window of 6 for easy, 60 for medium and 200 for hard), keeps those within plane-change
+   reach, ranks them with a quick phase-difference estimate, runs the full leg search for the best candidates and
+   moves to the one it can reach first. The window has to cover a whole low cluster or dense group (section 2):
+   with a narrower one, the candidates inside a group are the tomatoes closest in inclination, which says nothing
+   about their phase. A one-step lookahead (used for easy) prefers the candidate whose own best successor arrives
+   first; on hard it made the tour longer. The sweep never moves far from the tomato left furthest behind, so no
+   straggler is lost. Block transitions (cluster entries and exits) use the exception limit; the exceptions that
+   later cluster entries need are kept back, and only spare ones may be spent inside a block.
 4. Every (plan, start tomato) combination is built, in parallel processes with `--workers`; the best feasible tour is kept.
 
 ### 3.5 Improvement (`kttsp/improve.py`)
@@ -169,32 +174,41 @@ section 5). The last column gives the mission time reached by a published compet
 | instance | tomatoes | mission time [days] | exceptions used | max delta-v [m/s] | solver time | reference entry [days] |
 |---|---|---|---|---|---|---|
 | easy | 49 | **118.929** | 5 / 5 | 599.50 | 16 min | 116.9 |
-| medium | 181 | **194.585** | 5 / 5 | 599.50 | 82 min | 234.9 |
-| hard | 1051 | **451.054** | 5 / 5 | 599.50 | 112 min | 393.2 |
+| medium | 181 | **180.174** | 5 / 5 | 599.50 | 52 min | 234.9 |
+| hard | 1051 | **374.560** | 5 / 5 | 599.50 | 51 min | 393.2 |
 
 Solver time is the wall-clock time of all the commands that produced the tour (below) on a 15-core laptop
-(parallel construction and annealing chains), including the final re-timing. Among the entries submitted by
-1 July 2026, the hard leaderboard ranged from 337.6 days (winner) to 1965 days, and the hard tour here would have
-ranked fifth of nine. Later entries have improved the best scores: on 23 November 2026 the leaderboards start at
-101.2, 146.4 and 272.7 days, and the three tours here would rank 13th of 17, 12th of 16 and 8th of 12.
+(parallel construction and annealing chains), including the final re-timing; the medium and hard runs shared the
+laptop. Among the entries submitted by 1 July 2026, the hard leaderboard ranged from 337.6 days (winner) to
+1965 days, and the hard tour here would have ranked third of nine. Later entries have improved the best scores:
+on 24 November 2026 the leaderboards start at 101.2, 146.4 and 272.7 days, and the three tours here would rank
+13th of 17, 10th of 16 and 6th of 12.
 
 What the tours look like:
 
 * easy: 48 legs, 2.48 days per leg on average. With only one or two neighbours within reach of a 100 m/s
   transfer, the visiting order is essentially the inclination sweep; about 60% of the transfers between high
   orbits need one to three revolutions of the transfer orbit to fix the phase, the other 40% less than one.
-* medium: 180 legs, 1.08 days per leg. Closer inclination neighbours give the greedy a choice of targets that
+* medium: 180 legs, 1.00 days per leg. Closer inclination neighbours give the greedy a choice of targets that
   are already well phased.
-* hard: 1050 legs, 0.43 days per leg: with dozens of neighbours in reach, most hops are short, almost direct
-  transfers.
+* hard: 1050 legs, 0.36 days per leg. Inside the dense groups the hops are short, almost direct transfers
+  (0.28 days on average); the 143 single tomatoes of the chain take 1.5 days each, more than half of the mission.
 
-In every tour 99 to 100% of the normal transfers come within 0.5 m/s of the full budget (99.5 m/s, the limit minus
+In every tour 98 to 100% of the normal transfers come within 0.5 m/s of the full budget (99.5 m/s, the limit minus
 the safety margin) and the five exception transfers sit just under 600 m/s: the earliest arrival is almost always
-found at the edge of what is allowed. Spending the spare fifth exception is worth 0.6 to 4 days. The annealing adds
-3.5 days on easy and 4.0 days on medium (1.0 with the first version, 3.0 more with the mission-time test of
-section 3.5); on hard, where judging one move takes several seconds, about three hours of annealing with ten
-chains finds no shorter order. The final re-timing with the finer grid gains 0.23 days on hard and almost nothing
-on the other two.
+found at the edge of what is allowed. Spending the spare fifth exception is worth 0.2 to 4 days. The annealing adds
+3.5 days on easy and 4.7 days on medium. Hard is not annealed: judging one move takes several seconds there, and
+about three hours of annealing with ten chains found no shorter order for an earlier hard tour (below). The final
+re-timing with the finer grid gains almost nothing (0.008 days on hard).
+
+The largest gain comes from the window of the construction (section 3.4). An earlier version used a window of 6
+for medium and 30 for hard; with the same plan and start tomato, its constructions take 202.0 and 451.9 days,
+against 194.1 and 380.0 days with the windows of 60 and 200 (the earlier tours took 194.585 and 451.054 days
+after improvement). On that earlier hard tour, 133 hops between high orbits took more than a day each, half of the
+mission in total. The time of a hop follows the phase difference of the two tomatoes at departure (correlation
+0.93) much more than the change of inclination (0.42), and inside a dense group a narrow window only offers
+tomatoes that are close in inclination, not in phase. The one-step lookahead does not fix this: with the window of
+30 it made the hard construction longer (564 instead of 452 days).
 
 | easy | medium | hard |
 |---|---|---|
@@ -216,23 +230,17 @@ How the tours were computed (these commands overwrite the files in `solutions/`)
 ```bash
 .venv/bin/python -m kttsp solve data/easy.kttsp   --workers 8 --budget 900  --chains 8 --no-start-high --out solutions/easy.json
 .venv/bin/python -m kttsp improve data/easy.kttsp solutions/easy.json --budget 0
-.venv/bin/python -m kttsp solve data/medium.kttsp --workers 6 --budget 1800 --lookahead 0 --out solutions/medium.json
-.venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 600 --chains 6
-.venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 0 --min-tof 0.01
-.venv/bin/python -m kttsp improve data/medium.kttsp solutions/medium.json --budget 1800 --chains 6 --min-tof 0.01
-.venv/bin/python -m kttsp solve data/hard.kttsp   --workers 6 --window 30 --candidates 8 --starts 2 --budget 3600 --lookahead 0 --out solutions/hard.json
-.venv/bin/python -m kttsp improve data/hard.kttsp solutions/hard.json --budget 600 --chains 6
+.venv/bin/python -m kttsp solve data/medium.kttsp --workers 6 --window 60 --candidates 8 --lookahead 0 --budget 1800 --chains 6 --min-tof 0.01 --out solutions/medium.json
+.venv/bin/python -m kttsp solve data/hard.kttsp   --workers 9 --window 200 --candidates 8 --starts 3 --lookahead 0 --budget 0 --out solutions/hard.json
 .venv/bin/python -m kttsp improve data/hard.kttsp solutions/hard.json --budget 0
 .venv/bin/python scripts/results_table.py
 ```
 
-The tours were computed while the solver was still being developed: the medium and hard tours were built before
-the lookahead existed (hence `--lookahead 0`), all three were annealed with an earlier version of the improvement
-code and re-timed with the final code (the `--budget 0` lines), and after the mission-time test of section 3.5 was
-added, the medium tour was annealed once more (the last medium line). The same second annealing found no shorter
-tour on easy (`--budget 900 --chains 8`) or on hard (`--budget 3600 --chains 6`), and neither did a run of
-about three hours with ten chains on hard. The construction is deterministic, and the commands above rebuild
-exactly the same starting tours. The annealing uses fixed seeds, but its outcome depends on how many moves fit
+The easy tour was computed while the solver was still being developed: it was annealed with an earlier version of
+the improvement code and re-timed with the final code (the `--budget 0` line); a second annealing with the final
+code (`--budget 900 --chains 8`) found no shorter tour. The medium and hard tours were built with the final code.
+The construction is deterministic, and the commands above rebuild exactly the same starting tours (and the whole
+hard tour, which is not annealed). The annealing uses fixed seeds, but its outcome depends on how many moves fit
 into the time budget, so re-running the commands does not give exactly the same final mission times.
 
 ## 5. Verification
@@ -292,8 +300,10 @@ with `--chains` annealing chains and writes the solution JSON plus a `submission
 competition platform. The final results live in `solutions/` and `figures/`; write new runs somewhere else, such
 as `runs/` (ignored by git), so they are not overwritten. `--no-start-high` keeps only the plans that start inside
 a low cluster (they leave one exception transfer spare, which the improvement phase then spends well), and
-`--min-tof` sets a stricter minimum time of flight than the file's. For the hard instance use
-`--window 30 --candidates 8 --starts 2`. `improve` applies the improvement phase to an existing solution file.
+`--min-tof` sets a stricter minimum time of flight than the file's. For medium use
+`--window 60 --candidates 8 --lookahead 0` and for hard `--window 200 --candidates 8 --starts 3 --lookahead 0`, so
+that the window covers a whole dense group (section 3.4). `improve` applies the improvement phase to an existing
+solution file.
 `scripts/run_all.py` runs the three instances in a row with the construction settings and total time budgets of
 the published runs and writes into `runs/`; `scripts/results_table.py` evaluates the files in `solutions/` and
 prints the results table.
@@ -340,5 +350,5 @@ tests/                pytest suite and the pykep reference fixture
 * M. Bannach, G. Acciarini, D. Izzo, "The Keplerian Traveling Salesperson Problem", arXiv:2605.00010 (2026)
 * "ScienceFlow: A long-horizon agent for ML research, scientific discovery and beyond", arXiv:2608.14354 (2026):
   source of the reference entry in the results table
-* Leaderboards of the three problems on the competition platform (read on 23 November 2026):
+* Leaderboards of the three problems on the competition platform (read on 24 November 2026):
   https://optimise.esa.int/challenge/spoc-4-keplerian-tomato-traveling-salesperson/Problems
